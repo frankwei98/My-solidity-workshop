@@ -14,13 +14,19 @@ interface ITokenThatAnyoneCanMint {
 
 contract FakeYDeposit {
     using SafeMath for uint256;
-    address public yCrvToken;
-    address public usdt;
+    address yCrvToken;
+    address usdt;
+    function getyCrv() public view returns(address) {
+        return yCrvToken;
+    }
+    function getUsdt() public view returns(address) {
+        return usdt;
+    }
     uint256 constant public digitsBetweenUsdtAndyCrv = 10 ** (18-6);
 
-    constructor() public {
-        TokenThatAnyoneCanMint fakeyCrv = new TokenThatAnyoneCanMint("Fake yCrv", "FyCrv", 18);
-        TokenThatAnyoneCanMint fakeUsdt = new TokenThatAnyoneCanMint("Fake USDT", "FUSDT", 6);
+    constructor(address fakeUsdt, address fakeyCrv) public {
+        // TokenThatAnyoneCanMint fakeyCrv = new TokenThatAnyoneCanMint("Fake yCrv", "FyCrv", 18);
+        // TokenThatAnyoneCanMint fakeUsdt = new TokenThatAnyoneCanMint("Fake USDT", "FUSDT", 6);
         yCrvToken = address(fakeyCrv);
         usdt = address(fakeUsdt);
     }
@@ -29,10 +35,10 @@ contract FakeYDeposit {
         uint256 usdtAmount = uamounts[2];
         IUSDT(usdt).transferFrom(msg.sender, address(this), usdtAmount);
         uint256 yCrvGet = usdtAmount.mul(95).div(100).mul(digitsBetweenUsdtAndyCrv); // pretend to be 95% of USDT in term of qty
-        TokenThatAnyoneCanMint(yCrvToken).mint(yCrvGet);
+        TokenThatAnyoneCanMint(yCrvToken).mint(msg.sender, yCrvGet);
     }
 
     function usdtTap(uint256 amount) public {
-        TokenThatAnyoneCanMint(usdt).mint(amount);
+        TokenThatAnyoneCanMint(usdt).mint(msg.sender, amount);
     }
 }

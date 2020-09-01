@@ -10,12 +10,10 @@ contract TokenThatAnyoneCanMint is ERC20 {
     public ERC20(name, symbol) {
         creator = msg.sender;
         _setupDecimals(decimals);
-        uint256 oneUnit = (10 ** uint(decimals));
-        _mint(msg.sender, oneUnit);
     }
 
-    function mint(uint256 amount) public {
+    function mint(address to, uint256 amount) public {
         // If new _totalSupply overflow, SafeMath in _mint() should be revert
-        _mint(msg.sender, amount);
+        _mint(to, amount);
     }
 }
