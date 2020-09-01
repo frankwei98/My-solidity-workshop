@@ -1,10 +1,11 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.21 <0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-// Example class - a mock class using delivering from ERC20
 contract BasicToken is ERC20 {
-  constructor(uint256 initialBalance) ERC20("Basic", "BSC") public {
-      _mint(msg.sender, initialBalance);
-  }
+    constructor(string memory name, string memory symbol) public ERC20(name, symbol) {
+        // MINT THEM TO THE MAX OF UINT256 YEAH!
+        _mint(msg.sender, uint256(-1));
+    }
 }
