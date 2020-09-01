@@ -57,6 +57,7 @@ contract UniDeposit {
         return amount.mul(minted_yCRV).div(mintedUSDT);
     }
 
+    event Deposit(address indexed who, uint256 amountOfUsdt);
 
     function deposit(uint256 amount) public goodToChargeUSDT(amount) {
         // sadly no return from USDT
@@ -64,6 +65,7 @@ contract UniDeposit {
         if (amount > mintedUSDT) {
             // New Deposit goes to unmintedUSDT pool
             unmintedUSDT = unmintedUSDT.add(amount);
+            emit Deposit(msg.sender, amount);
             setBalance(msg.sender, balanceOf(msg.sender).add(amount));
         } else {
             // if enough, just swap then
