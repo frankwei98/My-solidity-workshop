@@ -15,5 +15,9 @@
     "test": "export NODE_ENV=test && mocha",
     "clean": "rimraf ./build/",
     "precompile": "yarn clean"
+  },
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "ethers": "^5.0.9"
   }
 }
