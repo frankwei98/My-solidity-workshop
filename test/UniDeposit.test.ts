@@ -1,7 +1,6 @@
 import {expect, use} from 'chai';
 import {Contract} from 'ethers';
 import {deployContract, MockProvider, solidity} from 'ethereum-waffle';
-import {deployENS, ENS} from '@ethereum-waffle/ens';
 import FakeYDeposit from '../build/FakeYDeposit.json';
 import UniDeposit from '../build/UniDeposit.json';
 import TokenThatAnyoneCanMint from "../build/TokenThatAnyoneCanMint.json";
