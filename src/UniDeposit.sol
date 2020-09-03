@@ -27,10 +27,10 @@ contract UniDeposit {
     }
 
     uint256 public mintedUSDT; // USDT involved in minting yCRV
-    uint256 public unmintedUSDT; // USDT not involved yet in minting yCRV
     
     //uint256 public minted_yCRV; // yCRV minted for now, can cal the price with mintedUSDT
 
+//    address public yDeposit = address("0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3");
     address public yDeposit;
 
     constructor(address _usdt, address _ycrv, address _depositContract) public {
@@ -54,46 +54,50 @@ contract UniDeposit {
         require(IUSDT(USDT).allowance(msg.sender, address(this)) >= amount, INSUFFICIENT_ALLOWANCE);
         _;
     }
-    
+
+    function unminted_USDT() view public returns (uint) {
+        return IERC20(USDT).balanceOf(address(this));
+    }    
     function minted_yCRV() view public returns (uint) {
         return IERC20(yCrvToken).balanceOf(address(this));
     }
-
     function get_yCrvFromUsdt(uint256 amount) public view returns (uint256) {
         return amount.mul(minted_yCRV()).div(mintedUSDT);
     }
+    function get_usdtFromYcrv(uint256 amount) public view returns (uint256) {
+        return amount.mul(mintedUSDT).div(minted_yCRV());
+    }    
 
     event Deposit(address indexed who, uint256 amountOfUsdt);
 
-    function deposit(uint256 amount) public goodToChargeUSDT(amount) {
+    function deposit(uint256 amount) external goodToChargeUSDT(amount) {
         // sadly no return from USDT
         IUSDT(USDT).transferFrom(msg.sender, address(this), amount);
         if (amount > mintedUSDT) {
             // New Deposit goes to unmintedUSDT pool
-            unmintedUSDT = unmintedUSDT.add(amount);
-            emit Deposit(msg.sender, amount);
             setBalance(msg.sender, balanceOf(msg.sender).add(amount));
+            emit Deposit(msg.sender, amount);
         } else {
             // if enough, just swap then
             uint256 yCrvWillGet = get_yCrvFromUsdt(amount);
             IERC20(yCrvToken).transfer(msg.sender, yCrvWillGet);
-            mintedUSDT = mintedUSDT - amount;
+            mintedUSDT -= amount;
         }
     }
 
-    function mint() public {
-        IyDeposit(yDeposit).add_liquidity([
-            0,
-            0,
-            unmintedUSDT,
-            0
-        ], 0);
-        // After Add Liquidity and get yCrv, setting counters
-        mintedUSDT = mintedUSDT.add(unmintedUSDT);
-        unmintedUSDT = 0;
+    function withdraw(uint amount) external {
+        uint ycrv = minted_yCRV();
+        require(amount <= ycrv, "Insufficient minted yCrv.");
+        IERC20(yCrvToken).transferFrom(msg.sender, address(this), amount);
+        IUSDT(USDT).transfer(msg.sender, get_usdtFromYcrv(amount));
     }
 
-    function withdraw() public {
+
+    function mint() public {
+        IyDeposit(yDeposit).add_liquidity([0,0,unminted_USDT(),0], 0);
+    }
+
+    function claim() public {
         // yCrv balance of this contract
         uint256 ycrvBalance = minted_yCRV();
         uint256 usdtBalance = balanceOf(msg.sender);
