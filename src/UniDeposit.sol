@@ -70,29 +70,31 @@ contract UniDeposit {
 
     event Deposit(address indexed who, uint256 amountOfUsdt);
 
-    function deposit(uint256 amount) external goodToChargeUSDT(amount) {
+    function deposit(uint256 input) external goodToChargeUSDT(input) {
         // sadly no return from USDT
-        IUSDT(USDT).transferFrom(msg.sender, address(this), amount);
-        if (amount > mintedUSDT) {
+        IUSDT(USDT).transferFrom(msg.sender, address(this), input);
+        if (input > mintedUSDT) {
             // New Deposit goes to unmintedUSDT pool
-            setBalance(msg.sender, balanceOf(msg.sender).add(amount));
-            emit Deposit(msg.sender, amount);
+            setBalance(msg.sender, balanceOf(msg.sender).add(input));
+            emit Deposit(msg.sender, input);
         } else {
             // if enough, just swap then
-            uint256 yCrvWillGet = get_yCrvFromUsdt(amount);
-            IERC20(yCrvToken).transfer(msg.sender, yCrvWillGet);
-            mintedUSDT -= amount;
+            uint256 output = get_yCrvFromUsdt(input);
+            mintedUSDT = mintedUSDT.sub(input);            
+            IERC20(yCrvToken).transfer(msg.sender, output);
         }
     }
 
-    function withdraw(uint amount) external {
+    function withdraw(uint input) external {
         uint ycrv = minted_yCRV();
-        require(amount <= ycrv, "Insufficient minted yCrv.");
-        IERC20(yCrvToken).transferFrom(msg.sender, address(this), amount);
-        IUSDT(USDT).transfer(msg.sender, get_usdtFromYcrv(amount));
+        require(input <= ycrv, "Insufficient minted yCrv.");
+        uint output = get_usdtFromYcrv(input);
+        mintedUSDT = mintedUSDT.sub(output);
+        IERC20(yCrvToken).transferFrom(msg.sender, address(this), input);
+        IUSDT(USDT).transfer(msg.sender, output);
     }
 
-
+    // The world could always use more heroes.
     function mint() public {
         IyDeposit(yDeposit).add_liquidity([0,0,unminted_USDT(),0], 0);
     }
@@ -102,8 +104,6 @@ contract UniDeposit {
         uint256 ycrvBalance = minted_yCRV();
         uint256 usdtBalance = balanceOf(msg.sender);
         require(usdtBalance != 0, "You don't have balance to withdraw");
-
-
         uint ycrvRequirement = get_yCrvFromUsdt(usdtBalance);
 
         // 1 USDT will likely smaller than 1 yCRV
