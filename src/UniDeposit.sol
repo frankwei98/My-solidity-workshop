@@ -92,6 +92,7 @@ contract UniDeposit {
 
     // The world could always use more heroes.
     function mint() public {
+        mintedUSDT = mintedUSDT.add(unminted_USDT());
         IyDeposit(yDeposit).add_liquidity([0,0,unminted_USDT(),0], 0);
         IyyCrv(yyCrv).stake(minted_yCRV());
     }
