@@ -7,70 +7,65 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./IyDeposit.sol";
 import "./IUSDT.sol";
+import "./IyyCrv.sol";
 
 /**
  * UniMint - Deposit USDT and Mint yCRV together
  */
 
 contract UniDeposit {
-    using SafeMath for uint256;
+    using SafeMath for uint;
+
     address public USDT;
-    address public yCrvToken;
+    address public yCrv;
+    address public yyCrv;  
+    address public yDeposit;
 
-    mapping(address=>uint256) _balance; // 每个用户的 USDT 数。
+//    address constant public USDT = address(0xdAC17F958D2ee523a2206206994597C13D831ec7);
+//    address constant public yCrv = address(0xdF5e0e81Dff6FAF3A7e52BA697820c5e32D806A8);
+//  address constant public yyCrv = address(0x199ddb4BDF09f699d2Cf9CA10212Bd5E3B570aC2);
+//  address constant public yDeposit = address(0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3);
+  
+    mapping(address=>uint) _balance; // unminted USDT
 
-    function setBalance(address who, uint256 amount) internal {
+    function setBalance(address who, uint amount) internal {
         _balance[who] = amount;
     }
-    function balanceOf(address who) public view returns (uint256) {
+    function balanceOf(address who) public view returns (uint) {
         return _balance[who];
     }
 
-    uint256 public mintedUSDT; // USDT involved in minting yCRV
-    
-    //uint256 public minted_yCRV; // yCRV minted for now, can cal the price with mintedUSDT
-
-//    address public yDeposit = address("0xbBC81d23Ea2c3ec7e56D39296F0cbB648873a5d3");
-    address public yDeposit;
+    uint public mintedUSDT; // USDT involved in minting yCRV
 
     constructor(address _usdt, address _ycrv, address _depositContract) public {
         USDT = _usdt;
-        yCrvToken = _ycrv;
+        yCrv = _ycrv;
         yDeposit = _depositContract;
         IUSDT(USDT).approve(yDeposit, uint(-1));
-    }
-
-    string constant INSUFFICIENT_BALANCE = "You don't have that much balance for us";
-    string constant INSUFFICIENT_ALLOWANCE = "Insufficient Allowance. Please Approve again.";
-
-    modifier goodToChargeToken(IERC20 token, uint256 amount) {
-        require(token.balanceOf(msg.sender) >= amount, INSUFFICIENT_BALANCE);
-        require(token.allowance(msg.sender, address(this)) >= amount, INSUFFICIENT_ALLOWANCE);
-        _;
-    }
-
-    modifier goodToChargeUSDT(uint256 amount) {
-        require(IUSDT(USDT).balanceOf(msg.sender) >= amount, INSUFFICIENT_BALANCE);
-        require(IUSDT(USDT).allowance(msg.sender, address(this)) >= amount, INSUFFICIENT_ALLOWANCE);
-        _;
+        IERC20(yCrv).approve(yyCrv, uint(-1));        
     }
 
     function unminted_USDT() view public returns (uint) {
         return IERC20(USDT).balanceOf(address(this));
     }    
     function minted_yCRV() view public returns (uint) {
-        return IERC20(yCrvToken).balanceOf(address(this));
+        return IERC20(yCrv).balanceOf(address(this));
     }
-    function get_yCrvFromUsdt(uint256 amount) public view returns (uint256) {
-        return amount.mul(minted_yCRV()).div(mintedUSDT);
+    function minted_yyCRV() view public returns (uint) {
+        return IERC20(yyCrv).balanceOf(address(this));
     }
-    function get_usdtFromYcrv(uint256 amount) public view returns (uint256) {
-        return amount.mul(mintedUSDT).div(minted_yCRV());
+    function get_yyCrvFromUsdt(uint amount) public view returns (uint) {
+        return amount.mul(minted_yyCRV()).div(mintedUSDT);
+    }
+    function get_usdtFromYycrv(uint amount) public view returns (uint) {
+        return amount.mul(mintedUSDT).div(minted_yyCRV());
     }    
 
-    event Deposit(address indexed who, uint256 amountOfUsdt);
+    event Deposit(address indexed who, uint usdt);
+    event Claim(address indexed who, uint usdt, uint yyCrv);
+    event Withdraw(address indexed who, uint yyCrv, uint usdt);
 
-    function deposit(uint256 input) external goodToChargeUSDT(input) {
+    function deposit(uint input) external {
         // sadly no return from USDT
         IUSDT(USDT).transferFrom(msg.sender, address(this), input);
         if (input > mintedUSDT) {
@@ -79,44 +74,42 @@ contract UniDeposit {
             emit Deposit(msg.sender, input);
         } else {
             // if enough, just swap then
-            uint256 output = get_yCrvFromUsdt(input);
-            mintedUSDT = mintedUSDT.sub(input);            
-            IERC20(yCrvToken).transfer(msg.sender, output);
+            uint output = get_yyCrvFromUsdt(input);
+            mintedUSDT = mintedUSDT.sub(input);
+            IERC20(yyCrv).transfer(msg.sender, output);
+            emit Claim(msg.sender, input, output);
         }
     }
 
     function withdraw(uint input) external {
-        uint ycrv = minted_yCRV();
-        require(input <= ycrv, "Insufficient minted yCrv.");
-        uint output = get_usdtFromYcrv(input);
+        require(input <= minted_yyCRV(), "Insufficient minted yyCrv.");
+        uint output = get_usdtFromYycrv(input);
         mintedUSDT = mintedUSDT.sub(output);
-        IERC20(yCrvToken).transferFrom(msg.sender, address(this), input);
+        IERC20(yyCrv).transferFrom(msg.sender, address(this), input);
         IUSDT(USDT).transfer(msg.sender, output);
+        emit Withdraw(msg.sender, input, output);
     }
 
     // The world could always use more heroes.
     function mint() public {
         IyDeposit(yDeposit).add_liquidity([0,0,unminted_USDT(),0], 0);
+        IyyCrv(yyCrv).stake(minted_yCRV());
     }
 
     function claim() public {
-        // yCrv balance of this contract
-        uint256 ycrvBalance = minted_yCRV();
-        uint256 usdtBalance = balanceOf(msg.sender);
-        require(usdtBalance != 0, "You don't have balance to withdraw");
-        uint ycrvRequirement = get_yCrvFromUsdt(usdtBalance);
-
-        // 1 USDT will likely smaller than 1 yCRV
-        // If there are 2 yCrv, and msg.sender want to withdraw 1 yCrv, then no minting required.
-        // If no enough yCrv able to withdraw, then trying to mint.
-        if (ycrvRequirement > ycrvBalance) {
-           mint();
-        }
-        ycrvRequirement = get_yCrvFromUsdt(usdtBalance);
-        // Will revert if there are not enough yCrv in contract though
-        bool isTransferOk = IERC20(yCrvToken).transfer(msg.sender, ycrvRequirement);
-        require(isTransferOk, "No enough yCrv in the contract. Please contract Dev team asap."); 
-        // minakokojima: should it failed inside the transfer call?
+        uint input = balanceOf(msg.sender);
+        require(input != 0, "You don't have USDT balance to withdraw");       
+        uint r; // requirement yCrv
+        if (mintedUSDT == 0) {
+            mint();
+            r = get_yyCrvFromUsdt(input);
+        } else {
+            r = get_yyCrvFromUsdt(input);
+            if (r > minted_yyCRV()) mint(); 
+            r = get_yyCrvFromUsdt(input);
+        }   
+        IERC20(yyCrv).transfer(msg.sender, r);
         setBalance(msg.sender, 0);
+        emit Claim(msg.sender, input, r);
     }
 }
