@@ -46,7 +46,7 @@ async function main() {
     console.log('yDeposit @ ', yDeposit.address);
     console.info('===== Deploying UniDeposit =====')
     const _uniDepo = await ethers.ContractFactory.fromSolidity(UniDeposit, wallet).deploy(usdt, ycrv, yDeposit.address);
-    await _uniDepo.deployTransaction.wait(1);
+    const receipt = await _uniDepo.deployTransaction.wait(1);
     console.info('===== uniDeposit Deployed =====')
     const uniDeposit = await _uniDepo.deployed();
     console.log('uniDeposit @ ', uniDeposit.address);
