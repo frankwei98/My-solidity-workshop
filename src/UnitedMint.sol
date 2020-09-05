@@ -13,7 +13,7 @@ import "./IyyCrv.sol";
  * UniMint - Deposit USDT and Mint yCRV together
  */
 
-contract UniDeposit {
+contract UnitedMint {
     using SafeMath for uint;
 
     address public USDT;
@@ -65,15 +65,16 @@ contract UniDeposit {
     event Claim(address indexed who, uint usdt, uint yyCrv);
     event Withdraw(address indexed who, uint yyCrv, uint usdt);
 
+    /**
+     * @dev Deposit usdt or claim yyCrv directly if balance of yyCrv is sufficient
+     */
     function deposit(uint input) external {
-        // sadly no return from USDT
+        require(input != 0, "Empty usdt");        
         IUSDT(USDT).transferFrom(msg.sender, address(this), input);
         if (input > mintedUSDT) {
-            // New Deposit goes to unmintedUSDT pool
             setBalance(msg.sender, balanceOf(msg.sender).add(input));
             emit Deposit(msg.sender, input);
         } else {
-            // if enough, just swap then
             uint output = get_yyCrvFromUsdt(input);
             mintedUSDT = mintedUSDT.sub(input);
             IERC20(yyCrv).transfer(msg.sender, output);
@@ -81,24 +82,22 @@ contract UniDeposit {
         }
     }
 
-    function withdraw(uint input) external {
-        require(input <= minted_yyCRV(), "Insufficient minted yyCrv.");
-        uint output = get_usdtFromYycrv(input);
-        mintedUSDT = mintedUSDT.sub(output);
-        IERC20(yyCrv).transferFrom(msg.sender, address(this), input);
-        IUSDT(USDT).transfer(msg.sender, output);
-        emit Withdraw(msg.sender, input, output);
-    }
-
-    // The world could always use more heroes.
+    /**
+     * @dev Mint all unminted_USDT into yyCrv
+     */
     function mint() public {
+        require(unminted_USDT() > 0, "Empty usdt");
+        mintedUSDT = mintedUSDT.add(unminted_USDT());
         IyDeposit(yDeposit).add_liquidity([0,0,unminted_USDT(),0], 0);
         IyyCrv(yyCrv).stake(minted_yCRV());
     }
 
+    /**
+     * @dev Claim yyCrv back, if the balance is sufficient, execute mint()
+     */
     function claim() public {
         uint input = balanceOf(msg.sender);
-        require(input != 0, "You don't have USDT balance to withdraw");       
+        require(input != 0, "You don't have USDT balance to withdraw");
         uint r; // requirement yCrv
         if (mintedUSDT == 0) {
             mint();
@@ -107,9 +106,37 @@ contract UniDeposit {
             r = get_yyCrvFromUsdt(input);
             if (r > minted_yyCRV()) mint(); 
             r = get_yyCrvFromUsdt(input);
-        }   
+        }
         IERC20(yyCrv).transfer(msg.sender, r);
         setBalance(msg.sender, 0);
         emit Claim(msg.sender, input, r);
+    }
+
+    /**
+     * @dev Try to claim unminted usdt by yyCrv if the balance is sufficient
+     */
+    function withdraw(uint input) external {
+        require(input != 0, "Empty yyCrv");
+        require(input <= minted_yyCRV(), "Insufficient minted yyCrv.");
+        uint output = get_usdtFromYycrv(input);
+        mintedUSDT = mintedUSDT.add(output);
+        IERC20(yyCrv).transferFrom(msg.sender, address(this), input);
+        IUSDT(USDT).transfer(msg.sender, output);
+        emit Withdraw(msg.sender, input, output);
+    }    
+
+    /**
+     * @dev Deposit usdt and claim yyCrv in any case
+     */
+    function depositAndClaim(uint input) external {
+        require(input != 0, "Empty usdt");        
+        IUSDT(USDT).transferFrom(msg.sender, address(this), input);
+        if (input > mintedUSDT) {
+            mint();
+        }
+        uint output = get_yyCrvFromUsdt(input);
+        mintedUSDT = mintedUSDT.sub(input);
+        IERC20(yyCrv).transfer(msg.sender, output);
+        emit Claim(msg.sender, input, output);
     }
 }
