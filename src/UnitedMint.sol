@@ -107,6 +107,7 @@ contract UnitedMint {
             if (r > minted_yyCRV()) mint(); 
             r = get_yyCrvFromUsdt(input);
         }
+        mintedUSDT = mintedUSDT.sub(input);        
         IERC20(yyCrv).transfer(msg.sender, r);
         setBalance(msg.sender, 0);
         emit Claim(msg.sender, input, r);
