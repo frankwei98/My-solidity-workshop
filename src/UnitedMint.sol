@@ -37,10 +37,11 @@ contract UnitedMint {
 
     uint public mintedUSDT; // USDT involved in minting yCRV
 
-    constructor(address _usdt, address _ycrv, address _depositContract) public {
+    constructor(address _usdt, address _ycrv, address _depositContract, address _yyCrv) public {
         USDT = _usdt;
         yCrv = _ycrv;
         yDeposit = _depositContract;
+        yyCrv = _yyCrv;
         IUSDT(USDT).approve(yDeposit, uint(-1));
         IERC20(yCrv).approve(yyCrv, uint(-1));        
     }
