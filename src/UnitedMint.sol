@@ -13,7 +13,7 @@ import "./IyyCrv.sol";
  * UniMint - Deposit USDT and Mint yCRV together
  */
 
-contract UniDeposit {
+contract UnitedMint {
     using SafeMath for uint;
 
     address public USDT;
