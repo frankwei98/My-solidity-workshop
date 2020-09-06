@@ -22,6 +22,12 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+      
     - run: yarn
     - run: yarn build
-    - run: yarn run deploy-testnet
+    - name: Deploy to Rinkeby Testnet
+      env: # Or as an environment variable
+        InfuraId: ${{ secrets.INFURAID }}
+        privateKey: ${{ secrets.PRIVATEKEY }}
+      run: yarn run deploy-testnet
+    # - run: yarn run deploy-testnet
