@@ -119,8 +119,9 @@ contract UnitedMint {
     function withdraw(uint input) external {
         require(input != 0, "Empty yyCrv");
         require(minted_yyCRV() != 0, "No yyCrv price at this moment");
-        require(input <= get_yyCrvFromUsdt(unminted_USDT()), "Insufficient unminted USDT");
-        uint output = get_usdtFromYycrv(input);
+        uint output = get_yyCrvFromUsdt(unminted_USDT());
+        if (output < input) input = output;
+        output = get_usdtFromYycrv(input);
         mintedUSDT = mintedUSDT.add(output);
         IERC20(yyCrv).transferFrom(msg.sender, address(this), input);
         IUSDT(USDT).transfer(msg.sender, output);
