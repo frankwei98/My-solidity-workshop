@@ -15,6 +15,7 @@
     "build": "waffle",
     "test": "export NODE_ENV=test && mocha",
     "clean": "rimraf ./build/",
+    "deploy-testnet": "ts-node ./deployment/UniDeposit-Testnet.ts",
     "precompile": "yarn clean"
   },
   "dependencies": {
