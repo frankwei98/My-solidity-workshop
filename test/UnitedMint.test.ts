@@ -20,26 +20,36 @@ describe('UnitedMint', () => {
     yCrv = await deployContract(wallet, TokenThatAnyoneCanMint, [
       "Fake yCrv", "FyCrv", 18
     ]);
+    /*
     fakeYDeposit = await deployContract(wallet, FakeYDeposit, [
       usdt.address, yCrv.address
     ]);    
     unitedMint = await deployContract(wallet, UnitedMint, [
       usdt.address, yCrv.address, fakeYDeposit.address
-    ]);
+    ]);*/
   });
+
+  
+  it('Fake USDT watertap is working', async () => {
+    //await fakeYDeposit.usdtTap(1000000);
+    //expect(await usdt.balanceOf(wallet.address)).to.equal(1000000);
+  });
+  /*
+
+  it('Deposit and Claim', async () => {
+    await fakeYDeposit.usdtTap(1000000);
+    await usdt.approve(UnitedMint.address, 1000000);
+    await UnitedMint.deposit(1000000);
+    expect(await UnitedMint.balanceOf(wallet.address)).to.equal(1000000);
+  });  */
 
   /*
-  it('Fake USDT watertap is working', async () => {
-    await fakeYDeposit.usdtTap(1000000);
-    expect(await usdt.balanceOf(wallet.address)).to.equal(1000000);
-  });
-
   it('Deposit USDT into UniDeposit', async () => {
     await fakeYDeposit.usdtTap(1000000);
     await usdt.approve(unideposit.address, 1000000);
     await unideposit.deposit(1000000);
     expect(await unideposit.balanceOf(wallet.address)).to.equal(1000000);
-  });
+  });  
 
   it('Deposit emits event', async () => {
     const amount = 1145141919810
