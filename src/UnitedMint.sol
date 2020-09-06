@@ -72,9 +72,9 @@ contract UnitedMint {
         return amount.mul(mintedUSDT).div(minted_yyCRV());
     }
 
-    event Deposit(address indexed who, uint256 usdt);
-    event Claim(address indexed who, uint256 usdt, uint256 yyCrv);
-    event Withdraw(address indexed who, uint256 yyCrv, uint256 usdt);
+    event Deposit(address indexed who, uint usdt);
+    event Claim(address indexed who, uint usdt, uint yyCrv);
+    event Restore(address indexed who, uint yyCrv, uint usdt);
 
     /**
      * @dev Deposit usdt or claim yyCrv directly if balance of yyCrv is sufficient
@@ -127,15 +127,17 @@ contract UnitedMint {
     /**
      * @dev Try to claim unminted usdt by yyCrv if the balance is sufficient
      */
-    function withdraw(uint256 input) external {
+    function restore(uint input) external {
         require(input != 0, "Empty yyCrv");
-        require(input <= minted_yyCRV(), "Insufficient minted yyCrv.");
-        uint256 output = get_usdtFromYycrv(input);
+        require(minted_yyCRV() != 0, "No yyCrv price at this moment");
+        uint output = get_yyCrvFromUsdt(unminted_USDT());
+        if (output < input) input = output;
+        output = get_usdtFromYycrv(input);
         mintedUSDT = mintedUSDT.add(output);
         IERC20(yyCrv).transferFrom(msg.sender, address(this), input);
         IUSDT(USDT).transfer(msg.sender, output);
-        emit Withdraw(msg.sender, input, output);
-    }
+        emit Restore(msg.sender, input, output);
+    }    
 
     /**
      * @dev Deposit usdt and claim yyCrv in any case
