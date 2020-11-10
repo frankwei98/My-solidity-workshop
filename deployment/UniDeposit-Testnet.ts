@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { ethers, BigNumber } from "ethers";
 // Load process.env from dotenv
 require("dotenv").config();
 
