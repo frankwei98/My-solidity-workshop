@@ -18,20 +18,35 @@ contract MatatakiPeggedToken is ERC20 {
         factory = msg.sender;
     }
 
-    modifier notInBlackList(address who) {
-        require(
-            IBlacklistManager(blacklistManager).isInBlacklist(who) == false,
-            "MatatakiPeggedToken::IN_BLACKLIST: Account was freezed. Please contact Matataki Team ASAP."
-        );
-        _;
-    }
-
     modifier adminOnly() {
         require(
             IBlacklistManager(blacklistManager).isAdmin(msg.sender),
             "MatatakiPeggedToken::ADMIN_ONLY: Matataki Admin only action "
         );
         _;
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        super._beforeTokenTransfer(from, to, amount);
+
+        bool isFromBanned = IBlacklistManager(blacklistManager).isInBlacklist(
+            from
+        );
+        bool isToBanned = IBlacklistManager(blacklistManager).isInBlacklist(
+            from
+        );
+        require(
+            !isFromBanned,
+            "MatatakiPeggedToken::FROM_IN_BLACKLIST: The from wallet was banned. Please contact Matataki Team ASAP."
+        );
+        require(
+            !isToBanned,
+            "MatatakiPeggedToken::TO_IN_BLACKLIST: The to wallet was banned. Please contact Matataki Team ASAP."
+        );
     }
 
     function operatorSend(
