@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.21 <0.7.0;
 
+interface IBlacklistManager {
+    function isAdmin(address) external returns (bool);
+
+    function isInBlacklist(address) external returns (bool);
+}
+
 contract BlacklistManager {
     mapping(address => bool) public isAdmin;
     mapping(address => bool) public isInBlacklist;

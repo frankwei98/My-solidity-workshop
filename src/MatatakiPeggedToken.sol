@@ -3,6 +3,7 @@ pragma solidity >=0.4.21 <0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./BlacklistManager.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MatatakiPeggedToken is ERC20 {
@@ -15,6 +16,41 @@ contract MatatakiPeggedToken is ERC20 {
         ERC20(_name, _symbol)
     {
         factory = msg.sender;
+    }
+
+    modifier notInBlackList(address who) {
+        require(
+            IBlacklistManager(blacklistManager).isInBlacklist(who) == false,
+            "MatatakiPeggedToken::IN_BLACKLIST: Account was freezed. Please contact Matataki Team ASAP."
+        );
+        _;
+    }
+
+    modifier adminOnly() {
+        require(
+            IBlacklistManager(blacklistManager).isAdmin(msg.sender),
+            "MatatakiPeggedToken::ADMIN_ONLY: Matataki Admin only action "
+        );
+        _;
+    }
+
+    function operatorSend(
+        address from,
+        address to,
+        uint256 value
+    ) public adminOnly {
+        // We run this service, we have the right as a operator
+        _transfer(from, to, value);
+    }
+
+    function mint(address account, uint256 amount) public adminOnly {
+        // New Token coming in this world
+        _mint(account, amount);
+    }
+
+    function burn(address account, uint256 amount) public adminOnly {
+        // Token getting out to another world
+        _burn(account, amount);
     }
 
     function initialize(address _newblacklistManager, uint8 _decimals) public {
@@ -118,9 +154,5 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
 
     function tokenCreationCode() public override view returns (bytes memory) {
         return type(MatatakiPeggedToken).creationCode;
-    }
-
-    function pairCodeHash() public view returns (bytes32) {
-        return keccak256(tokenCreationCode());
     }
 }
