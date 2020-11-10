@@ -40,11 +40,6 @@ contract MatatakiPeggedToken is ERC20 {
 }
 
 interface IMatatakiPeggedTokenFactory {
-    function computeSalt(string calldata _name, string calldata _symbol)
-        external
-        view
-        returns (bytes32 salt);
-
     function computeAddress(string calldata _name, string calldata _symbol)
         external
         view
@@ -62,6 +57,7 @@ interface IMatatakiPeggedTokenFactory {
 contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
     address public blacklistManager;
     address[] public allPeggedTokens;
+    bytes32 constant salt = keccak256("Matataki Pegged Token");
 
     event NewPeggedToken(
         string indexed name,
@@ -69,13 +65,18 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
         address tokenAddress
     );
 
-    function computeSalt(string memory _name, string memory _symbol)
-        public
-        override
-        view
-        returns (bytes32 salt)
-    {
-        salt = keccak256(abi.encodePacked(_name, _symbol));
+    function initBlacklistManager(address where) public onlyOwner() {
+        blacklistManager = where;
+    }
+
+    function computeCreationCodeWithArgs(
+        string memory _name,
+        string memory _symbol
+    ) public view returns (bytes memory result) {
+        result = abi.encodePacked(
+            tokenCreationCode(),
+            abi.encode(_name, _symbol)
+        );
     }
 
     function computeAddress(string memory _name, string memory _symbol)
@@ -84,7 +85,6 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
         view
         returns (address predictedAddress)
     {
-        bytes32 salt = computeSalt(_name, _symbol);
         /// This complicated expression just tells you how the address
         /// can be pre-computed. It is just there for illustration.
         /// You actually only need ``new D{salt: salt}(arg)``.
@@ -95,13 +95,7 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
                         hex"ff",
                         address(this),
                         salt,
-                        keccak256(
-                            abi.encodePacked(
-                                tokenCreationCode(),
-                                _name,
-                                _symbol
-                            )
-                        )
+                        keccak256(computeCreationCodeWithArgs(_name, _symbol))
                     )
                 )
             )
@@ -113,7 +107,6 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
         string memory _symbol,
         uint8 _decimals
     ) public override onlyOwner() {
-        bytes32 salt = computeSalt(_name, _symbol);
         MatatakiPeggedToken _token = new MatatakiPeggedToken{salt: salt}(
             _name,
             _symbol
@@ -125,5 +118,9 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
 
     function tokenCreationCode() public override view returns (bytes memory) {
         return type(MatatakiPeggedToken).creationCode;
+    }
+
+    function pairCodeHash() public view returns (bytes32) {
+        return keccak256(tokenCreationCode());
     }
 }
