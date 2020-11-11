@@ -36,9 +36,7 @@ contract MatatakiPeggedToken is ERC20 {
         bool isFromBanned = IBlacklistManager(blacklistManager).isInBlacklist(
             from
         );
-        bool isToBanned = IBlacklistManager(blacklistManager).isInBlacklist(
-            from
-        );
+        bool isToBanned = IBlacklistManager(blacklistManager).isInBlacklist(to);
         require(
             !isFromBanned,
             "MatatakiPeggedToken::FROM_IN_BLACKLIST: The from wallet was banned. Please contact Matataki Team ASAP."
