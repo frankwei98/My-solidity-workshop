@@ -10,8 +10,16 @@ interface IBlacklistManager {
 contract BlacklistManager {
     mapping(address => bool) public isAdmin;
     mapping(address => bool) public isInBlacklist;
-    event Enlist(address operator, address[] list, uint256 datetime);
-    event Delist(address operator, address[] list, uint256 datetime);
+    event Enlist(
+        address indexed operator,
+        uint256 indexed datetime,
+        address[] list
+    );
+    event Delist(
+        address indexed operator,
+        uint256 indexed datetime,
+        address[] list
+    );
     event HandoverAdmin(address from, address to);
 
     constructor() public {
@@ -42,7 +50,7 @@ contract BlacklistManager {
             address who = list[i];
             isInBlacklist[who] = true;
         }
-        emit Enlist(msg.sender, list, block.timestamp);
+        emit Enlist(msg.sender, block.timestamp, list);
     }
 
     function delistPeoples(address[] memory list) public onlyAdmins {
@@ -50,6 +58,6 @@ contract BlacklistManager {
             address who = list[i];
             isInBlacklist[who] = false;
         }
-        emit Delist(msg.sender, list, block.timestamp);
+        emit Delist(msg.sender, block.timestamp, list);
     }
 }
