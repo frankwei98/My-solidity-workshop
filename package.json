@@ -1,4 +1,5 @@
 {
+  "license": "MIT",
   "devDependencies": {
     "@openzeppelin/contracts": "^3.1.0",
     "@types/chai": "^4.2.12",
@@ -7,14 +8,15 @@
     "ethereum-waffle": "^3.0.3",
     "mocha": "^8.1.3",
     "rimraf": "^3.0.2",
-    "solc": "0.6.6",
+    "solc": "0.6.12",
     "ts-node": "^9.0.0",
     "typescript": "^4.0.2"
   },
   "scripts": {
-    "build": "waffle",
+    "build": "yarn clean && waffle && yarn flatten",
+    "flatten": "npx waffle flatten",
     "test": "export NODE_ENV=test && mocha",
-    "clean": "rimraf ./build/",
+    "clean": "rimraf ./build/ && rimraf ./flatten/*.sol",
     "deploy-testnet": "ts-node ./deployment/UniDeposit-Testnet.ts",
     "precompile": "yarn clean"
   },
