@@ -43,20 +43,20 @@ describe("PegTokenFactory", () => {
     factory = fixture.factory;
   });
 
-  it("Revert 'initBlacklistManager' after BlacklistManager existed", async () => {
+  it("Revert if 'initBlacklistManager' was triggered before", async () => {
     await expect(factory.initBlacklistManager(blacklistMgr.address)).to.be
       .reverted;
   });
 
-  it("Good to compute token address for DAO", async () => {
+  it("Able to compute the token address based on name and symbol", async () => {
     const address = await factory.computeAddress("岛岛币", "DAO");
     console.info(
-      `Computed Token address for DAO is: ${address}, based on factory address: ${factory.address}`
+      `Computed Token address for 岛岛币 is: ${address}, based on factory address: ${factory.address}`
     );
     expect(address).to.not.equal(ZERO_ADDRESS);
   });
 
-  it("New Pegged Token will emits event", async () => {
+  it("Good to Produce New Pegged Token", async () => {
     const [name, symbol] = ["岛岛币", "DAO"];
     const computedTokenAddress = await factory.computeAddress(name, symbol);
 
@@ -65,6 +65,27 @@ describe("PegTokenFactory", () => {
       "NewPeggedToken"
     );
     expect(await factory.allPeggedTokens(0)).to.equal(computedTokenAddress);
+  });
+
+  it("Transfer token to someone", async () => {
+    const [name, symbol] = ["USD Trump", "USDT"];
+    const computedTokenAddress = await factory.computeAddress(name, symbol);
+
+    await expect(factory.newAPeggedToken(name, symbol, 4)).to.emit(
+      factory,
+      "NewPeggedToken"
+    );
+    const usdtWithAdmin = new Contract(
+      computedTokenAddress,
+      Token.abi,
+      provider
+    ).connect(managerWallet);
+    const amount = "19198100000";
+    await usdtWithAdmin.mint(managerWallet.address, amount);
+    // Transfer
+    await expect(usdtWithAdmin.transfer(someRandomAss.address, amount))
+      .to.emit(usdtWithAdmin, "Transfer")
+      .withArgs(managerWallet.address, someRandomAss.address, amount);
   });
 
   it("Can Mint and Burn token as admin", async () => {
@@ -91,7 +112,7 @@ describe("PegTokenFactory", () => {
       .withArgs(someRandomAss.address, ZERO_ADDRESS, amount);
   });
 
-  it("Ban someone and stop transfer out", async () => {
+  it("Ban someone from transfer token out", async () => {
     const [name, symbol] = ["USD Trump", "USDT"];
     const computedTokenAddress = await factory.computeAddress(name, symbol);
 
@@ -131,7 +152,7 @@ describe("PegTokenFactory", () => {
     );
   });
 
-  it("Ban someone and stop transferring into it", async () => {
+  it("Ban someone from receive any token", async () => {
     const [name, symbol] = ["USD Trump", "USDT"];
     const computedTokenAddress = await factory.computeAddress(name, symbol);
 
