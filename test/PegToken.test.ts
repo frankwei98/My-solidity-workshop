@@ -7,6 +7,8 @@ import Factory from "../build/MatatakiPeggedTokenFactory.json";
 
 use(solidity);
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 describe("PegTokenFactory", () => {
   const provider = new MockProvider({
     ganacheOptions: {
@@ -15,16 +17,24 @@ describe("PegTokenFactory", () => {
       gasLimit: 9999999,
     },
   });
-  const [wallet, walletTo] = provider.getWallets();
+  const [
+    managerWallet,
+    designateBadDude,
+    someRandomAss,
+  ] = provider.getWallets();
   let factory: Contract;
   let blacklistMgr: Contract;
 
   async function loadFixture() {
-    const blacklistMgr = await deployContract(wallet, BlacklistManager, []);
-    const factory = await deployContract(wallet, Factory, []);
+    const blacklistMgr = await deployContract(
+      managerWallet,
+      BlacklistManager,
+      []
+    );
+    const factory = await deployContract(managerWallet, Factory, []);
     await factory.initBlacklistManager(blacklistMgr.address);
     expect(await factory.blacklistManager()).to.equal(blacklistMgr.address);
-    return { blacklistMgr, factory, wallet };
+    return { blacklistMgr, factory, wallet: managerWallet };
   }
 
   beforeEach(async () => {
@@ -43,7 +53,7 @@ describe("PegTokenFactory", () => {
     console.info(
       `Computed Token address for DAO is: ${address}, based on factory address: ${factory.address}`
     );
-    expect(address).to.not.equal("0x0000000000000000000000000000000000000000");
+    expect(address).to.not.equal(ZERO_ADDRESS);
   });
 
   it("New Pegged Token will emits event", async () => {
@@ -56,42 +66,102 @@ describe("PegTokenFactory", () => {
     );
     expect(await factory.allPeggedTokens(0)).to.equal(computedTokenAddress);
   });
-  // it("Deposit USDT into unitedMint", async () => {
-  //   await fakeYDeposit.usdtTap(1000000);
-  //   await usdt.approve(unitedMint.address, 1000000);
-  //   await unitedMint.deposit(1000000);
-  //   expect(await unitedMint.balanceOf(wallet.address)).to.equal(1000000);
-  // });
 
-  // it("Deposit emits event", async () => {
-  //   const amount = 1145141919810;
-  //   await fakeYDeposit.usdtTap(amount);
-  //   await usdt.approve(unitedMint.address, amount);
-  //   await expect(unitedMint.deposit(amount))
-  //     .to.emit(unitedMint, "Deposit")
-  //     .withArgs(wallet.address, amount);
-  // });
+  it("Can Mint and Burn token as admin", async () => {
+    const [name, symbol] = ["小富币", "FWC"];
+    const computedTokenAddress = await factory.computeAddress(name, symbol);
 
-  // it("Can not Deposit if not approved", async () => {
-  //   const soBig = "0xFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-  //   await expect(unitedMint.deposit(soBig)).to.be.reverted;
-  // });
+    await expect(factory.newAPeggedToken(name, symbol, 4)).to.emit(
+      factory,
+      "NewPeggedToken"
+    );
+    const fwcToken = new Contract(
+      computedTokenAddress,
+      Token.abi,
+      provider
+    ).connect(managerWallet);
+    const amount = "1145141919810";
+    // Mint
+    await expect(fwcToken.mint(someRandomAss.address, amount))
+      .to.emit(fwcToken, "Transfer")
+      .withArgs(ZERO_ADDRESS, someRandomAss.address, amount);
+    // And BURN that Ass
+    await expect(fwcToken.burn(someRandomAss.address, amount))
+      .to.emit(fwcToken, "Transfer")
+      .withArgs(someRandomAss.address, ZERO_ADDRESS, amount);
+  });
 
-  // it("Can convert from usdt to yyCrv", async () => {
-  //   const amount = 1000000;
-  //   const minCrvWillGet = Math.floor(amount * 0.9);
-  //   await fakeYDeposit.usdtTap(amount);
-  //   await usdt.approve(unitedMint.address, amount);
-  //   await unitedMint.deposit(amount);
-  //   await unitedMint.mint();
-  //   await unitedMint.claim();
-  //   expect(await yyCrv.balanceOf(wallet.address)).to.gt(minCrvWillGet);
-  // });
+  it("Ban someone and stop transfer out", async () => {
+    const [name, symbol] = ["USD Trump", "USDT"];
+    const computedTokenAddress = await factory.computeAddress(name, symbol);
 
-  // it("Calls balanceOf with sender address on unitedMint contract", async () => {
-  //   await unitedMint.balanceOf(wallet.address);
-  //   expect("balanceOf").to.be.calledOnContractWith(unitedMint, [
-  //     wallet.address,
-  //   ]);
-  // });
+    await expect(factory.newAPeggedToken(name, symbol, 4)).to.emit(
+      factory,
+      "NewPeggedToken"
+    );
+    const usdtWithAdmin = new Contract(
+      computedTokenAddress,
+      Token.abi,
+      provider
+    ).connect(managerWallet);
+    const usdtWithBadDude = usdtWithAdmin.connect(designateBadDude);
+    const amount = "19198100000";
+
+    // Let's say he hacked something, and got a lot of money
+    // Print money to his account just for example
+    await expect(usdtWithAdmin.mint(designateBadDude.address, amount))
+      .to.emit(usdtWithAdmin, "Transfer")
+      .withArgs(ZERO_ADDRESS, designateBadDude.address, amount);
+
+    // Let's say the random dude got money for bad dude
+    await expect(usdtWithAdmin.mint(someRandomAss.address, amount))
+      .to.emit(usdtWithAdmin, "Transfer")
+      .withArgs(ZERO_ADDRESS, someRandomAss.address, amount);
+
+    // We come in and ban his ass
+    await expect(
+      blacklistMgr.enlistPeoples([designateBadDude.address])
+    ).to.emit(blacklistMgr, "Enlist");
+
+    // And Bad dude can not do anything, boo
+    await expect(
+      usdtWithBadDude.transfer(someRandomAss.address, amount)
+    ).to.be.revertedWith(
+      "MatatakiPeggedToken::FROM_IN_BLACKLIST: The from wallet was banned. Please contact Matataki Team ASAP."
+    );
+  });
+
+  it("Ban someone and stop transferring into it", async () => {
+    const [name, symbol] = ["USD Trump", "USDT"];
+    const computedTokenAddress = await factory.computeAddress(name, symbol);
+
+    await expect(factory.newAPeggedToken(name, symbol, 4)).to.emit(
+      factory,
+      "NewPeggedToken"
+    );
+    const usdtWithAdmin = new Contract(
+      computedTokenAddress,
+      Token.abi,
+      provider
+    ).connect(managerWallet);
+    const usdtWithRandomDude = usdtWithAdmin.connect(someRandomAss);
+    const amount = "19198100000";
+
+    // Let's say the random dude got money for bad dude
+    await expect(usdtWithAdmin.mint(someRandomAss.address, amount))
+      .to.emit(usdtWithAdmin, "Transfer")
+      .withArgs(ZERO_ADDRESS, someRandomAss.address, amount);
+
+    // We come in and ban his ass
+    await expect(
+      blacklistMgr.enlistPeoples([designateBadDude.address])
+    ).to.emit(blacklistMgr, "Enlist");
+
+    // Not even getting money in
+    await expect(
+      usdtWithRandomDude.transfer(designateBadDude.address, amount)
+    ).to.be.revertedWith(
+      "MatatakiPeggedToken::TO_IN_BLACKLIST: The to wallet was banned. Please contact Matataki Team ASAP."
+    );
+  });
 });
