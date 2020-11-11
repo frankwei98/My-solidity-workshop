@@ -117,6 +117,7 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
     );
 
     function initBlacklistManager(address where) public onlyOwner() {
+        require(address(0) == blacklistManager, "Blacklist manager is existed");
         blacklistManager = where;
     }
 
