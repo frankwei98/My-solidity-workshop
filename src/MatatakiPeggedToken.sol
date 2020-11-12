@@ -107,6 +107,7 @@ interface IMatatakiPeggedTokenFactory {
 contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
     address public blacklistManager;
     address[] public allPeggedTokens;
+    mapping(string => address) public symbolToAddress;
     bytes32 constant salt = keccak256("Matataki Pegged Token");
 
     event NewPeggedToken(
@@ -158,11 +159,13 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
         string memory _symbol,
         uint8 _decimals
     ) public override onlyOwner() {
+        require(symbolToAddress[_symbol] == address(0), "Token have been created on this factory");
         MatatakiPeggedToken _token = new MatatakiPeggedToken{salt: salt}(
             _name,
             _symbol
         );
         _token.initialize(blacklistManager, _decimals);
+        symbolToAddress[_symbol] = address(_token);
         allPeggedTokens.push(address(_token));
         emit NewPeggedToken(_name, _symbol, address(_token));
     }
