@@ -2,18 +2,19 @@
 pragma solidity >=0.4.21 <0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./ERC20WithPermit.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./BlacklistManager.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MatatakiPeggedToken is ERC20 {
+contract MatatakiPeggedToken is ERC20WithPermit {
     address public factory;
     // A Contract that manage blacklist
     address public blacklistManager;
 
     constructor(string memory _name, string memory _symbol)
         public
-        ERC20(_name, _symbol)
+        ERC20WithPermit(_name, _symbol)
     {
         factory = msg.sender;
     }
