@@ -1,5 +1,5 @@
 import { expect, use } from "chai";
-import { Contract } from "ethers";
+import { Contract, ethers } from "ethers";
 import { deployContract, MockProvider, solidity } from "ethereum-waffle";
 import BlacklistManager from "../build/BlacklistManager.json";
 import Token from "../build/MatatakiPeggedToken.json";
@@ -31,6 +31,7 @@ describe("PegTokenFactory", () => {
       BlacklistManager,
       []
     );
+    
     const factory = await deployContract(managerWallet, Factory, []);
     await factory.initBlacklistManager(blacklistMgr.address);
     expect(await factory.blacklistManager()).to.equal(blacklistMgr.address);

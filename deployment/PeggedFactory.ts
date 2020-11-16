@@ -19,16 +19,16 @@ const provider = new ethers.providers.JsonRpcProvider(network.rpcUrl, {
 const wallet = new ethers.Wallet(String(process.env.privateKey), provider);
 
 async function main() {
-  const blackList = "0xBD98FB43Ea8Cfc94D4fd0Fe61BcE98B64579dc55";
+  const blackList = "0x0a66824356baD4C02b2cbbe883779eEDD23348d3";
   const factory = await ethers.ContractFactory.fromSolidity(
     MatatakiPeggedTokenFactory,
     wallet
-  ).deploy();
+  ).deploy(blackList);
   const deployReceipt = await factory.deployTransaction.wait(1);
   console.info(`Factory deployed at: ${deployReceipt.contractAddress}`);
   const deployed = await factory._deployed();
-  await deployed.initBlacklistManager(blackList);
-  console.info("initized BlacklistManager");
+  const res = await deployed.newAPeggedToken("FFFWWWCCC", "FWWWWC", 4);
+  console.log(res)
 }
 
 main();

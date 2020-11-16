@@ -4,13 +4,13 @@ pragma solidity >=0.4.21 <0.7.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./ERC20WithPermit.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./BlacklistManager.sol";
+import "./AddressRegistry.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MatatakiPeggedToken is ERC20WithPermit {
     address public factory;
     // A Contract that manage blacklist
-    address public blacklistManager;
+    address public addressRegistry;
 
     constructor(string memory _name, string memory _symbol)
         public
@@ -21,7 +21,7 @@ contract MatatakiPeggedToken is ERC20WithPermit {
 
     modifier adminOnly() {
         require(
-            IBlacklistManager(blacklistManager).isAdmin(msg.sender),
+            IMatatakiAddressRegistry(addressRegistry).isAdmin(msg.sender),
             "MatatakiPeggedToken::ADMIN_ONLY: Matataki Admin only action "
         );
         _;
@@ -34,10 +34,10 @@ contract MatatakiPeggedToken is ERC20WithPermit {
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
-        bool isFromBanned = IBlacklistManager(blacklistManager).isInBlacklist(
+        bool isFromBanned = IMatatakiAddressRegistry(addressRegistry).isInBlacklist(
             from
         );
-        bool isToBanned = IBlacklistManager(blacklistManager).isInBlacklist(to);
+        bool isToBanned = IMatatakiAddressRegistry(addressRegistry).isInBlacklist(to);
         require(
             !isFromBanned,
             "MatatakiPeggedToken::FROM_IN_BLACKLIST: The from wallet was banned. Please contact Matataki Team ASAP."
@@ -67,25 +67,25 @@ contract MatatakiPeggedToken is ERC20WithPermit {
         _burn(account, amount);
     }
 
-    function initialize(address _newblacklistManager, uint8 _decimals) public {
+    function initialize(address _newaddressRegistry, uint8 _decimals) public {
         require(
-            blacklistManager == address(0),
+            addressRegistry == address(0),
             "MatatakiPeggedToken::INIT_BL: Blacklist Manager is existed already"
         );
         require(
-            _newblacklistManager != address(0),
+            _newaddressRegistry != address(0),
             "MatatakiPeggedToken::INIT_BL: New Blacklist Manager can not be ZERO"
         );
-        blacklistManager = _newblacklistManager;
+        addressRegistry = _newaddressRegistry;
         _setupDecimals(_decimals);
     }
 
-    function updateTheBlacklistMgr(address _newblacklistManager) public {
+    function updateTheBlacklistMgr(address _newaddressRegistry) public {
         require(
-            blacklistManager != address(0) && blacklistManager == msg.sender,
+            addressRegistry != address(0) && addressRegistry == msg.sender,
             "MatatakiPeggedToken::MUST_BE_BL_MGR: You must be the manager to update"
         );
-        blacklistManager = _newblacklistManager;
+        addressRegistry = _newaddressRegistry;
     }
 }
 
@@ -105,7 +105,7 @@ interface IMatatakiPeggedTokenFactory {
 }
 
 contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
-    address public blacklistManager;
+    address public addressRegistry;
     address[] public allPeggedTokens;
     mapping(string => address) public symbolToAddress;
     bytes32 constant salt = keccak256("Matataki Pegged Token");
@@ -116,9 +116,8 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
         address tokenAddress
     );
 
-    function initBlacklistManager(address where) public onlyOwner() {
-        require(address(0) == blacklistManager, "Blacklist manager is existed");
-        blacklistManager = where;
+    constructor(address registry) public {
+        addressRegistry = registry;
     }
 
     function computeCreationCodeWithArgs(
@@ -164,7 +163,7 @@ contract MatatakiPeggedTokenFactory is Ownable, IMatatakiPeggedTokenFactory {
             _name,
             _symbol
         );
-        _token.initialize(blacklistManager, _decimals);
+        _token.initialize(addressRegistry, _decimals);
         symbolToAddress[_symbol] = address(_token);
         allPeggedTokens.push(address(_token));
         emit NewPeggedToken(_name, _symbol, address(_token));

@@ -51,7 +51,7 @@ async function signPermit(
     name: 'PeggedTokenMinter',
     version: '1',
     chainId: 0x61,
-    verifyingContract: '0xcaa34f0278c625a861c28e79308ce60171ead961'
+    verifyingContract: '0xe8142C86f7c25A8bF1c73Ab2A5Dd7a7A5C429171'
   };
 
   // The named list of all type definitions
