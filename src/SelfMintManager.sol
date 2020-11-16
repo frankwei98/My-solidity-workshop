@@ -19,6 +19,9 @@ contract PeggedTokenMinter is Ownable {
     bytes32
         public constant
         PERMIT_TYPEHASH = keccak256("Permit(address token,address to,uint256 value,uint256 nonce,uint256 deadline)");
+
+    event MintWithPermit(address indexed token, address indexed to, uint256 nonce, uint256 amount);
+
     constructor(address _managerRegistry) public {
         managerRegistry = _managerRegistry;
         uint256 _chainId;
@@ -62,7 +65,7 @@ contract PeggedTokenMinter is Ownable {
                         token,
                         to,
                         value,
-                        nonces[token][to]++,
+                        nonces[token][to],
                         deadline
                     )
                 )
@@ -77,6 +80,9 @@ contract PeggedTokenMinter is Ownable {
         );
         // Mint if call successfully
         MintableERC20(token).mint(to, value);
+        emit MintWithPermit(token, to, nonces[token][to], value);
+        // Increment on nonces
+        nonces[token][to] += 1;
     }
 
     function getNoncesOf(address tokenToMint, address who) public view returns (uint256) {
