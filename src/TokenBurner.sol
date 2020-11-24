@@ -24,21 +24,22 @@ interface Burnable {
 }
 
 contract TokenBurner {
-    event BurnFanPiao(
-        address indexed tokenAddress,
-        address indexed from,
-        uint256 value
-    );
+    event BurnFanPiao(address indexed tokenAddress, uint256 uid, uint256 value);
 
-    function burn(address token, uint256 value) public {
+    function burn(
+        address token,
+        uint256 uid,
+        uint256 value
+    ) public {
         IERC20(token).transferFrom(msg.sender, address(this), value); // send value to us
         // burn value in our contract, the contract have to to be admin
         Burnable(token).burn(address(this), value);
-        emit BurnFanPiao(token, msg.sender, value);
+        emit BurnFanPiao(token, uid, value);
     }
 
     function burnWithPermit(
         address token,
+        uint256 uid,
         uint256 value,
         uint256 deadline,
         uint8 v,
@@ -55,6 +56,6 @@ contract TokenBurner {
             r,
             s
         );
-        burn(token, value);
+        burn(token, uid, value);
     }
 }
