@@ -39,7 +39,7 @@ interface IERC20Detailed {
 
 contract MatatakiTokenBurner {
     address public factory;
-    event BurnFanPiao(address indexed tokenAddress, uint256 uid, uint256 value);
+    event BurnFanPiao(address indexed tokenAddress, uint256 indexed uid, uint256 value);
 
     constructor(address _factory) public {
         factory = _factory;
