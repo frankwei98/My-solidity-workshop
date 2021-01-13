@@ -14,6 +14,8 @@ contract MatatakiStakingLocker is Ownable {
     uint256 public lockPeriod = 30 days;
     mapping(address=>uint256) public balanceOf;
     mapping(address=>uint256) public lockExpiry;
+    event Staked(address indexed who, uint256 amount);
+    event Unstaked(address indexed who, uint256 amount);
 
     constructor(address _stakingToken, address _manager) public {
         stakingToken = _stakingToken;
@@ -40,11 +42,13 @@ contract MatatakiStakingLocker is Ownable {
         IERC20(stakingToken).transferFrom(msg.sender, address(this), amount);
         balanceOf[msg.sender] = balanceOf[msg.sender].add(amount);
         lockExpiry[msg.sender] = block.timestamp + lockPeriod;
+        emit Staked(msg.sender, amount);
     }
 
     function unstake(uint256 amount) public isGoodToUnstake {
         balanceOf[msg.sender] = balanceOf[msg.sender].sub(amount);
         IERC20(stakingToken).transfer(msg.sender, amount);
+        emit Unstaked(msg.sender, amount);
     }
 
     function extendLockdown() public {
